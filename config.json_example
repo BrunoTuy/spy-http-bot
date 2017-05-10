@@ -1,0 +1,6 @@
+{
+	"tokenBot": "{id do bot passado pelo pai}",
+	"mongo": {
+        "base": "spyHTTPtst",
+        "colecoes": ["logIN"]}
+}

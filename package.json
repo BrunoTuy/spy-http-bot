@@ -1,0 +1,17 @@
+{
+  "name": "spy-http-bot",
+  "version": "0.1.0",
+  "description": " Bot de telegram para verificar status de URL http e sinalizar quando ouver erro",
+  "contributors": [
+    {
+      "name": "Bruno Tuy",
+      "email": "murta@tuy.com.br"
+    }
+  ],
+  "dependencies": {
+    "mongojs": "^2.4.0",
+    "node-telegram-bot-api": "^0.27.0",
+    "request": "^2.81.0"
+  },
+  "main": "spy-http-bot.js"
+}

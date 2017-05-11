@@ -1,9 +1,10 @@
 var	TelegramBot = require('node-telegram-bot-api'),
     mongojs = require('mongojs'),
 	request = require('request'),
-	_config = require('./config.json');
+	_config = require('./config.json'),
+	core = require('./core.js');
 
-const bot = new TelegramBot( _config.tokenBot, {polling: true});
+global.bot = new TelegramBot( _config.tokenBot, {polling: true});
 
 bot.on('message', (msg) => {
 	console.info( msg.from.id+' >> '+msg.text );
@@ -20,7 +21,7 @@ bot.on('message', (msg) => {
 	});
 
     bot.sendMessage( msg.from.id, msg.text );
+    core.processar( msg );
 });
 
-var db = mongojs(_config.mongo.base, _config.mongo.colecoes);
-
+global.db = mongojs(_config.mongo.base, _config.mongo.colecoes);

@@ -4,16 +4,12 @@ var request = require('request'),
 var processar = function( opt ){
     var _text = opt.text.toLowerCase();
 
-    if ( _text.substring( 0, 6 ) == '/start' ){
-        var opts = {
-          reply_markup: JSON.stringify(
-            {
-              force_reply: true,
-              keyboard: [['Cadastrar Alerta','Listar'],['Testar agora']]
-            }
-          )};
-        return bot.sendMessage( opt.from.id, "Ok, iniciou.\nEscolhe a opção no teclado abaixo!?!?", opts );
-    }
+    if ( _text.substring( 0, 6 ) == '/start' )
+        return bot.sendMessage( opt.from.id, "Ok, iniciou.\nEscolhe a opção no teclado abaixo!?!?", {
+            reply_markup: JSON.stringify({
+                force_reply: true,
+                keyboard: [['Cadastrar Alerta','Listar'],['Testar agora']]})
+        });
 
     else {
         _getContext({
@@ -31,6 +27,18 @@ var processar = function( opt ){
                         }
                     });
 
+               else if ( _text == 'testar agora' )
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "test",
+                        callback: function( _cnx ){
+                            opt.btn = true;
+
+                            _lstTeste( opt );
+                        }
+                    });
+
                 else if ( _cnx.context == "add" ){
                     _cadTeste( opt );
 
@@ -41,7 +49,24 @@ var processar = function( opt ){
                         callback: function( _cnx ){
                         }
                     });
-               }
+                }
+
+                else if ( _cnx.context == "test" ){
+                    if ( _text == "voltar" ){
+                        _menu( opt );
+
+                        _setContext({
+                            userId: opt.from.id,
+                            chatId: opt.chat.id,
+                            context: "",
+                            callback: function( _cnx ){
+                            }
+                        });
+                    }
+
+                    else
+                        _testar( opt );
+                }
 
                 else if ( _text == 'listar' )
                     _lstTeste( opt );
@@ -129,9 +154,27 @@ var processar = function( opt ){
         else if ( lst.length < 1 )
             bot.sendMessage( opt.from.id, "Lista zerada.\nAdicione alertas primeiro." );
 
-        else
-            for ( var x = 0; x < lst.length; x++ )
-                bot.sendMessage( opt.from.id, (x+1)+": "+lst[x].url );
+        else {
+            var _keys = [],
+                _txt = "";
+
+            for ( var x = 0; x < lst.length; x++ ){
+                _txt += lst[x].url+"\n";
+                _keys.push([ lst[x].url ]);
+            }
+
+            _keys.push([ "Voltar" ]);
+
+            if ( opt.btn )
+                bot.sendMessage( opt.from.id, "Escolhe o alerta logo abaixo!?!?", {
+                    reply_markup: JSON.stringify({
+                        force_reply: true,
+                        keyboard: _keys})
+                });
+
+            else
+                bot.sendMessage( opt.from.id, _txt );
+        }
     });
 
 },  _lstLog = function( opt ){
@@ -166,22 +209,19 @@ var processar = function( opt ){
     });
 
 },  _testar = function( opt ){
-    var _num = opt.text.substring( 5 ).trim();
+    var _url = opt.text.trim();
 
-    if ( !_num || _num.length < 1 || isNaN( _num ) )
-        return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
-
-    db.alert.find({chatId: opt.from.id}, function( err, lst ){
-        if ( lst.length < _num )
+    db.alert.find({url: _url}, function( err, lst ){
+        if ( lst.length < 1 )
             return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
-
-        if ( !lst[_num-1].testes )
-            lst[_num-1].testes = [];
 
         var _dtIni = new Date();
 
+        if ( !lst[0].testes )
+            lst[0].testes = [];
+
         request({
-            url: lst[_num-1].url,
+            url: lst[0].url,
             method: 'GET',
 
         }, function(error, response, body){
@@ -191,12 +231,19 @@ var processar = function( opt ){
             _tst.tempo = _tst.data - _dtIni;
             _tst.status = response ? response.statusCode : false;
 
-            lst[_num-1].testes.push( _tst );
+            lst[0].testes.push( _tst );
 
-            db.alert.update({_id: lst[_num-1]._id}, {$set: {testes: lst[_num-1].testes}});
+            db.alert.update({_id: lst[0]._id}, {$set: {testes: lst[0].testes}});
 
-            bot.sendMessage( lst[_num-1].chatId, _tst.status+' >> '+lst[_num-1].url+' ['+_tst.tempo+'ms]' );
+            bot.sendMessage( lst[0].chatId, _tst.status+' >> '+lst[0].url+' ['+_tst.tempo+'ms]' );
         });
+    });
+
+},  _menu = function( opt ){
+    bot.sendMessage( opt.from.id, "Escolhe a opção no teclado abaixo!?!?", {
+        reply_markup: JSON.stringify({
+            force_reply: true,
+            keyboard: [['Cadastrar Alerta','Listar'],['Testar agora']]})
     });
 };
 

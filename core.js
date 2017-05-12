@@ -1,4 +1,5 @@
-var request = require('request');
+var request = require('request'),
+    format = require( "./format.js" );
 
 var processar = function( opt ){
     var _text = opt.text.toLowerCase();
@@ -73,8 +74,18 @@ var processar = function( opt ){
 
         var _txt = "";
 
-        for ( var x = 0; x < lst[_num-1].testes.length; x++ )
-            _txt += lst[_num-1].testes[x].data+' ['+lst[_num-1].testes[x].status+']'+( lst[_num-1].testes[x].tempo ? '['+lst[_num-1].testes[x].tempo+'ms]\n' : '' );
+        for ( var x = 0; x < lst[_num-1].testes.length; x++ ){
+
+            var data = new Date( lst[_num-1].testes[x].data );
+            var dia = format.string.completar( data.getDate().toString(), 2 ),
+                mes = format.string.completar( ( data.getMonth()+1 ).toString(), 2 ),
+                ano = data.getFullYear(),
+                hora = format.string.completar( data.getHours().toString(), 2 ),
+                minuto = format.string.completar( data.getMinutes().toString(), 2 ),
+                segundo = format.string.completar( data.getSeconds().toString(), 2 );
+
+            _txt += dia+'/'+mes+'/'+ano+' '+hora+':'+minuto+':'+segundo+' ['+lst[_num-1].testes[x].status+']'+( lst[_num-1].testes[x].tempo ? '['+lst[_num-1].testes[x].tempo+'ms]\n' : '' );
+        }
 
         bot.sendMessage( opt.from.id, _txt );
     });

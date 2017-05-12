@@ -65,7 +65,7 @@ var processar = function( opt ){
     if ( !_num || _num.length < 1 || isNaN( _num ) )
         return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
 
-    db.alert.find({}, function( err, lst ){
+    db.alert.find({chatId: opt.from.id}, function( err, lst ){
         if ( lst.length < _num )
             return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
 
@@ -96,7 +96,7 @@ var processar = function( opt ){
     if ( !_num || _num.length < 1 || isNaN( _num ) )
         return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
 
-    db.alert.find({}, function( err, lst ){
+    db.alert.find({chatId: opt.from.id}, function( err, lst ){
         if ( lst.length < _num )
             return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
 

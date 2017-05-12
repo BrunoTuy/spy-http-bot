@@ -9,29 +9,100 @@ var processar = function( opt ){
           reply_markup: JSON.stringify(
             {
               force_reply: true,
-              keyboard: [['lst'],['add'],['add']]
+              keyboard: [['Cadastrar Alerta','Listar'],['Testar agora']]
             }
           )};
-        return bot.sendMessage( opt.from.id, "Ok, iniciou. Escolhe a opção no teclado abaixo!?!?", opts );
+        return bot.sendMessage( opt.from.id, "Ok, iniciou.\nEscolhe a opção no teclado abaixo!?!?", opts );
     }
 
-    if ( _text.substring( 0, 3 ) == 'add' )
-        _cadTeste( opt );
+    else {
+        _getContext({
+            userId: opt.from.id,
+            chatId: opt.chat.id,
+            callback: function( _cnx ){
 
-    else if ( _text.substring( 0, 3 ) == 'lst' )
-        _lstTeste( opt );
+                if ( _text == 'cadastrar alerta' )
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "add",
+                        callback: function( _cnx ){
+                            bot.sendMessage( opt.from.id, "Agora digita a URL completa!" );
+                        }
+                    });
 
-    else if ( _text.substring( 0, 4 ) == 'test' )
-        _testar( opt );
+                else if ( _cnx.context == "add" ){
+                    _cadTeste( opt );
 
-    else if ( _text.substring( 0, 3 ) == 'log' )
-        _lstLog( opt );
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "",
+                        callback: function( _cnx ){
+                        }
+                    });
+               }
 
-    else
-        bot.sendMessage( opt.from.id, "Nada!!!" );
+                else if ( _text == 'listar' )
+                    _lstTeste( opt );
 
+                else if ( _text.substring( 0, 4 ) == 'test' )
+                    _testar( opt );
+
+                else if ( _text.substring( 0, 3 ) == 'log' )
+                    _lstLog( opt );
+
+                else
+                    bot.sendMessage( opt.from.id, "Nada!!!" );
+            }
+        });
+    }
+
+},  _getContext = function( opt ){
+    db.context.find({
+        userId: opt.userId,
+        chatId: opt.chatId
+    }, function( err, lst ){
+        if ( err ){
+            console.info( 'ERRO: '+err );
+
+            opt.callback({context: false});
+        }
+
+        if ( lst.length < 1 )
+            opt.callback({context: false});
+
+        else
+            opt.callback(lst[0]);
+    });
+ 
+},  _setContext = function( opt ){
+    var _opt = opt;
+
+    _getContext({
+        userId: opt.userId,
+        chatId: opt.chatId,
+        callback: function( _cnx ){
+            if ( !_cnx._id )
+                db.context.save({
+                    userId: opt.userId,
+                    chatId: opt.chatId,
+                    context: opt.context
+                }, function( err, dds ){
+                    opt.callback(dds);
+                });
+
+            else
+                db.context.update({_id: _cnx._id},{$set: {context: opt.context}}, function( err, dds ){
+                    opt.callback( dds );
+                });
+        }
+    });
+
+    _getContext( _opt );
+ 
 },  _cadTeste = function( opt ){
-    var _url = opt.text.toLowerCase().substring( 4 );
+    var _url = opt.text.toLowerCase();
 
     db.alert.save({
         data: new Date(),

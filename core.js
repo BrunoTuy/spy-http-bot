@@ -4,12 +4,16 @@ var request = require('request'),
 var processar = function( opt ){
     var _text = opt.text.toLowerCase();
 
-    if ( _text.substring( 0, 6 ) == '/start' )
-        return bot.sendMessage( opt.from.id, "Ok, iniciou. Escolhe a opção no teclado abaixo!!!", {
-            keyboard: ["Listar", "Cadastrar"],
-            resize_keyboard: true,
-            one_time_keyboard: true
-        });
+    if ( _text.substring( 0, 6 ) == '/start' ){
+        var opts = {
+          reply_markup: JSON.stringify(
+            {
+              force_reply: true,
+              keyboard: [['lst'],['add'],['add']]
+            }
+          )};
+        return bot.sendMessage( opt.from.id, "Ok, iniciou. Escolhe a opção no teclado abaixo!?!?", opts );
+    }
 
     if ( _text.substring( 0, 3 ) == 'add' )
         _cadTeste( opt );

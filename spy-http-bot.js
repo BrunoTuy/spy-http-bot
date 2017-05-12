@@ -20,7 +20,7 @@ bot.on('message', (msg) => {
 		}
 	});
 
-    bot.sendMessage( msg.from.id, msg.text );
+//    bot.sendMessage( msg.from.id, msg.text );
     core.processar( msg );
 });
 

@@ -187,7 +187,8 @@ var processar = function( opt ){
 
     db.alert.save({
         data: new Date(),
-        chatId: opt.from.id,
+        userId: opt.from.id,
+        chatId: opt.chat.id,
         url: _url
     }, function( err, dds ){
         console.info( err );
@@ -201,7 +202,10 @@ var processar = function( opt ){
     });
 
 },  _lstTeste = function( opt ){
-    db.alert.find({chatId: opt.from.id}, function( err, lst ){
+    db.alert.find({
+        userId: opt.from.id,
+        chatId: opt.chat.id
+    }, function( err, lst ){
         if ( err )
             bot.sendMessage( opt.from.id, err );
 
@@ -264,7 +268,11 @@ var processar = function( opt ){
         _userId = opt.from.id,
         _chatId = opt.chat.id;
 
-    db.alert.find({url: _url}, function( err, lst ){
+    db.alert.find({
+        userId: _userId,
+        chatId: _chatId,
+        url: _url
+    }, function( err, lst ){
         if ( lst.length < 1 ){
             if ( !opt.silent )
                 return;
@@ -307,14 +315,15 @@ var processar = function( opt ){
     db.alert.find({tempoAgd: {$gt: 0}}, function( err, lst ){
         var _dt = new Date();
 
-        for ( var x = 0; x < lst.length; x++ )
-            if ( !lst[x].ultimoTeste || lst[x].tempoAgd*1000 < (_dt - lst[x].ultimoTeste) )
+        for ( var x = 0; x < lst.length; x++ ){
+            if ( !lst[x].ultimoTeste || lst[x].tempoAgd*60000 < (_dt - lst[x].ultimoTeste) )
                 _testar({
                     silent: true,
                     from: {id: lst[x].userId},
                     chat: {id: lst[x].chatId},
                     text: lst[x].url 
                 });
+        }
     });
 
     setTimeout( _agd, 45000 );

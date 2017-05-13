@@ -242,13 +242,20 @@ var processar = function( opt ){
         chatId: opt.chat.id,
         userId: opt.from.id,
         url: _url
+    },{
+        data: true,
+        status: true,
+        url: true,
+        tempo: true
+    },{
+       sort: [["data", "desc"]] 
     }, function( err, lst ){
         if ( lst.length < 1 )
             return bot.sendMessage( opt.from.id, 'Nenhum teste feito para esse alerta.' );
 
         var _txt = "";
 
-        for ( var x = 0; x < lst.length; x++ ){
+        for ( var x = 0; x < 20 && x < lst.length; x++ ){
             var data = new Date( lst[x].data );
             var dia = format.string.completar( data.getDate().toString(), 2 ),
                 mes = format.string.completar( ( data.getMonth()+1 ).toString(), 2 ),
@@ -257,7 +264,7 @@ var processar = function( opt ){
                 minuto = format.string.completar( data.getMinutes().toString(), 2 ),
                 segundo = format.string.completar( data.getSeconds().toString(), 2 );
 
-            _txt += dia+'/'+mes+'/'+ano+' '+hora+':'+minuto+':'+segundo+' ['+lst[x].status+']['+lst[x].tempo+'ms]\n';
+            _txt = dia+'/'+mes+'/'+ano+' '+hora+':'+minuto+':'+segundo+' ['+lst[x].status+']['+lst[x].tempo+'ms]\n'+_txt;
         }
 
         bot.sendMessage( opt.from.id, _txt );

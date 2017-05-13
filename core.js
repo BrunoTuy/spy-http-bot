@@ -4,20 +4,19 @@ var request = require('request'),
 var processar = function( opt ){
     var _text = opt.text.toLowerCase();
 
-    if ( _text.substring( 0, 6 ) == '/start' )
-        return bot.sendMessage( opt.from.id, "Ok, iniciou.\nEscolhe a opção no teclado abaixo!?!?", {
-            reply_markup: JSON.stringify({
-                force_reply: true,
-                keyboard: [['Cadastrar alerta','Listar'],['Testar agora', 'Listar testes']]})
-        });
+    if ( _text.substring( 0, 6 ) == '/start' ){
+        bot.sendMessage( opt.from.id, "Olá\n\nEsse bot tem a finalidade de monitorar URLs" );
+        _menu( opt );
+    }
 
     else {
         _getContext({
             userId: opt.from.id,
             chatId: opt.chat.id,
             callback: function( _cnx ){
+                console.info( 'CNX: '+_cnx.context );
 
-                if ( _text == 'cadastrar alerta' )
+                if ( _text == 'cadastrar' )
                     _setContext({
                         userId: opt.from.id,
                         chatId: opt.chat.id,
@@ -38,6 +37,19 @@ var processar = function( opt ){
                             _lstTeste( opt );
                         }
                     });
+
+                else if ( _text == 'editar' )
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "edit",
+                        callback: function( _cnx ){
+                            opt.btn = true;
+
+                            _lstTeste( opt );
+                        }
+                    });
+
 
                 else if ( _text == 'listar testes' )
                     _setContext({
@@ -63,49 +75,66 @@ var processar = function( opt ){
                     });
                 }
 
-                else if ( _cnx.context == "test" ){
-                    if ( _text == "voltar" ){
-                        _menu( opt );
+                else if ( _text == "voltar" && ( [ "test", "log" ].indexOf( _cnx.context ) > -1 || _cnx.context.substring( 0, 7 ) == "urledit" ) ){
+                    _menu( opt );
 
-                        _setContext({
-                            userId: opt.from.id,
-                            chatId: opt.chat.id,
-                            context: "",
-                            callback: function( _cnx ){
-                            }
-                        });
-                    }
-
-                    else
-                        _testar( opt );
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "",
+                        callback: function( _cnx ){
+                        }
+                    });
                 }
 
-                else if ( _cnx.context == "log" ){
-                    if ( _text == "voltar" ){
-                        _menu( opt );
-
-                        _setContext({
-                            userId: opt.from.id,
-                            chatId: opt.chat.id,
-                            context: "",
-                            callback: function( _cnx ){
-                            }
-                        });
-                    }
-
-                    else
-                        _lstLog( opt );
-                }
-
-                else if ( _text == 'listar' )
-                    _lstTeste( opt );
-
-                else if ( _text.substring( 0, 4 ) == 'test' )
+                else if ( _cnx.context == "test" )
                     _testar( opt );
 
-                else if ( _text.substring( 0, 3 ) == 'log' )
+                else if ( _cnx.context == "log" )
                     _lstLog( opt );
 
+                else if ( _cnx.context == 'edit' )
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "urledit "+_text,
+                        callback: function( _cnx ){
+                            bot.sendMessage( opt.from.id, ".", {
+                                reply_markup: JSON.stringify({
+                                    force_reply: true,
+                                    keyboard: [['Agendar Teste'],['Voltar']]})
+                            });
+                        }
+                    });
+  
+                else if ( _cnx.context.substring( 0, 7 ) == 'urledit' )
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "urlagd "+_cnx.context.substring( 8 ),
+                        callback: function( _cnx ){
+                             bot.sendMessage( opt.from.id, "Informe o tempo em minutos." );
+                        }
+                    });
+ 
+                else if ( _cnx.context.substring( 0, 6 ) == 'urlagd' ){
+                    if ( _text.length < 1 || isNaN( _text ) )
+                          return bot.sendMessage( opt.from.id, "Informe o tempo em minutos." );
+
+                    _setContext({
+                        userId: opt.from.id,
+                        chatId: opt.chat.id,
+                        context: "",
+                        callback: function( ){
+                            var _num = parseInt( _text );
+
+                            db.alert.update({url: _cnx.context.substring( 7 )}, {$set: {tempoAgd: _num}});
+
+                            _menu( opt );
+                        }
+                    });
+                }
+ 
                 else
                     bot.sendMessage( opt.from.id, "Nada!!!" );
             }
@@ -236,8 +265,12 @@ var processar = function( opt ){
         _chatId = opt.chat.id;
 
     db.alert.find({url: _url}, function( err, lst ){
-        if ( lst.length < 1 )
+        if ( lst.length < 1 ){
+            if ( !opt.silent )
+                return;
+
             return bot.sendMessage( opt.from.id, 'Alerta não cadastrado.' );
+        }
 
         var _dtIni = new Date();
 
@@ -256,8 +289,10 @@ var processar = function( opt ){
             _tst.status = response ? response.statusCode : false;
 
             db.test.save(_tst);
+            db.alert.update({_id: lst[0]._id}, {$set: {ultimoTeste: new Date()}});
 
-            bot.sendMessage( lst[0].chatId, _tst.status+' >> '+lst[0].url+' ['+_tst.tempo+'ms]' );
+            if ( !opt.silent )
+                bot.sendMessage( lst[0].chatId, _tst.status+' >> '+lst[0].url+' ['+_tst.tempo+'ms]' );
         });
     });
 
@@ -265,8 +300,26 @@ var processar = function( opt ){
     bot.sendMessage( opt.from.id, "Escolhe a opção no teclado abaixo!?!?", {
         reply_markup: JSON.stringify({
             force_reply: true,
-            keyboard: [['Cadastrar alerta','Listar'],['Testar agora', 'Listar testes']]})
+            keyboard: [['Cadastrar','Editar'],['Testar agora', 'Listar testes']]})
     });
+
+},  _agd = function( ){
+    db.alert.find({tempoAgd: {$gt: 0}}, function( err, lst ){
+        var _dt = new Date();
+
+        for ( var x = 0; x < lst.length; x++ )
+            if ( !lst[x].ultimoTeste || lst[x].tempoAgd*1000 < (_dt - lst[x].ultimoTeste) )
+                _testar({
+                    silent: true,
+                    from: {id: lst[x].userId},
+                    chat: {id: lst[x].chatId},
+                    text: lst[x].url 
+                });
+    });
+
+    setTimeout( _agd, 45000 );
 };
+
+setTimeout( _agd, 1000); 
 
 exports.processar = processar;
